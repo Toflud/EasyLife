@@ -16,6 +16,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
+import org.apache.http.protocol.HTTP;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
@@ -26,7 +27,8 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * A placeholder fragment containing a simple view.
+ *  The PlaceholderFragment presents a UserIntent list
+ *
  */
 public class PlaceholderFragment extends Fragment implements View.OnClickListener {
 
@@ -38,6 +40,7 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
      * fragment.
      */
     private static final String ARG_SECTION_NUMBER = "section_number";
+    public static final String HTTP_HOST_USER_LIST = "http://192.168.1.48:8080/user/list/";
 
     private String listeName ;
 
@@ -125,12 +128,44 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
         request.execute();
     }
 
+    private void saveContentList() {
+        ListView listView = (ListView) PlaceholderFragment.this.getView().findViewById(R.id.listView) ;
+        final PopupAdapter adapter = (PopupAdapter) listView.getAdapter();
+        UserList userList = adapter.getUserList() ;
+
+        HttpPutTask put = new HttpPutTask();
+        put.execute(userList) ;
+    }
+
+    /**
+     *
+     */
+    private class HttpPutTask extends AsyncTask<UserList, Void, Void> {
+
+        @Override
+        protected Void doInBackground(UserList... params) {
+            try {
+                final String url = HTTP_HOST_USER_LIST + listeName;
+
+                RestTemplate restTemplate = new RestTemplate();
+                restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
+
+                restTemplate.put(url, params[0]) ;
+                Log.i("MainActivity", "put done") ;
+
+            } catch (Exception e) {
+                Log.e("MainActivity", e.getMessage(), e);
+            }
+            return null ;
+        }
+    }
+
     private class HttpRequestTask extends AsyncTask<Void, Void, UserList> {
 
         @Override
         protected UserList doInBackground(Void... params) {
             try {
-                final String url = "http://192.168.1.48:8080/user/list/"+listeName;
+                final String url = HTTP_HOST_USER_LIST + listeName;
                 RestTemplate restTemplate = new RestTemplate();
                 restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
                 UserList userList = restTemplate.getForObject(url, UserList.class);
@@ -167,7 +202,7 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
                 return ;
             }
 
-            ArrayAdapter adapter = new PopupAdapter(list.getListe()) ;
+            ArrayAdapter adapter = new PopupAdapter(list) ;
 
 
             listView.setAdapter(adapter);
@@ -189,7 +224,7 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
 
                     //String listeName = PlaceholderFragment.MAPPED_LISTED_NAME[curItem] ;
 
-                    final String url = "http://192.168.1.48:8080/user/list/"+listeName;
+                    final String url = HTTP_HOST_USER_LIST+listeName;
                     RestTemplate restTemplate = new RestTemplate();
                     restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
 
@@ -236,6 +271,11 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
                     case R.id.menu_remove:
                         // Remove the item from the adapter
                         adapter.remove(item);
+
+                        /** **/
+                        saveContentList();
+                        /** **/
+
                         return true;
                 }
                 return false;
@@ -248,20 +288,25 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
     // END_INCLUDE(show_popup)
 
     /**
-     * A simple array adapter that creates a list of cheeses.
+     * A simple array adapter that creates a list of UserIntent.
      */
     class PopupAdapter extends ArrayAdapter<UserIntent> {
 
-        PopupAdapter(List<UserIntent> items) {
-            super(getActivity(), R.layout.list_item, android.R.id.text1, items);
+        private UserList userList ;
+
+        PopupAdapter(UserList userList) {
+            super(getActivity(), R.layout.list_item, android.R.id.text1, userList.getListe());
+            this.userList = userList ;
+        }
+
+        public UserList getUserList() {
+            return userList;
         }
 
         @Override
         public View getView(int position, View convertView, ViewGroup container) {
             // Let ArrayAdapter inflate the layout and set the text
             //View view = super.getView(position, convertView, container);
-
-
 
             // Check if an existing view is being reused, otherwise inflate the view
             if (convertView == null) {
