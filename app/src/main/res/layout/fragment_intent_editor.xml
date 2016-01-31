@@ -1,0 +1,19 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools" android:layout_width="match_parent"
+    android:layout_height="match_parent" tools:context="com.ouiztiti.easylife.UserIntentEditorFragment"
+    android:background="@color/background_material_light">
+
+
+    <TextView android:layout_width="match_parent" android:layout_height="match_parent"
+        android:text="@string/hello_intent_editor_fragment" />
+
+    <EditText
+        android:layout_width="match_parent"
+        android:layout_height="125dp"
+        android:id="@+id/intentTitleInput"
+        android:layout_gravity="left|top"
+        android:inputType="text"
+        android:hint="@string/intentTitleInputHint" />
+
+
+</FrameLayout>

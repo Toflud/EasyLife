@@ -27,7 +27,10 @@ import android.widget.TextView;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
-public class MainActivity extends AppCompatActivity implements ActionBar.TabListener, UserListListener {
+public class MainActivity extends AppCompatActivity
+                            implements  ActionBar.TabListener,
+                                        UserListListener,
+                                        UserIntentEditorFragment.OnFragmentInteractionListener {
 
     private static final String LOG_TAG = PlaceholderFragment.class.getSimpleName() ;
 
@@ -149,6 +152,11 @@ public class MainActivity extends AppCompatActivity implements ActionBar.TabList
                 }
             }
         }
+    }
+
+    @Override
+    public void onFragmentInteraction(Uri uri) {
+        Log.d(LOG_TAG, "onFragmentInteraction " + uri);
     }
 
 

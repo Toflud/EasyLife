@@ -3,6 +3,8 @@ package com.ouiztiti.easylife;
 import android.app.Activity;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
+import android.support.v4.app.FragmentTransaction;
 import android.support.v7.widget.PopupMenu;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -128,7 +130,24 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
                 });
                 break ;
             case android.R.id.text1 :
+                boolean mIsLargeLayout = true ;
                 // Show Item Editor View Dialog
+                // Retrieve the clicked item from view's tag
+                final UserIntent item = (UserIntent) view.getTag();
+                FragmentManager fragmentManager = getFragmentManager();
+                UserIntentEditorFragment editorFragment = UserIntentEditorFragment.newInstance(item, "");
+                if(mIsLargeLayout) {
+                    editorFragment.show(fragmentManager, "dialog");
+                } else {
+                    // The device is smaller, so show the fragment fullscreen
+                    FragmentTransaction transaction = fragmentManager.beginTransaction();
+                    // For a little polish, specify a transition animation
+                    transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_OPEN);
+                    // To make it fullscreen, use the 'content' root view as the container
+                    // for the fragment, which is always the root view for the activity
+                    transaction.add(android.R.id.content, editorFragment)
+                            .addToBackStack(null).commit();
+                }
 
                 break ;
         }
