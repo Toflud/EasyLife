@@ -19,5 +19,11 @@
     <item
         android:id="@+id/menu_remove"
         android:title="@string/menu_remove" />
+    <item
+        android:id="@+id/menu_move_to_left"
+        android:title="Left Move" />
+    <item
+        android:id="@+id/menu_move_to_right"
+        android:title="Move Right" />
 
 </menu>

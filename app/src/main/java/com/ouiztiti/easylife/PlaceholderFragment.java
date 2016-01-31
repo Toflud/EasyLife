@@ -1,8 +1,6 @@
 package com.ouiztiti.easylife;
 
 import android.app.Activity;
-import android.location.Location;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.PopupMenu;
@@ -17,15 +15,10 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 
-import org.apache.http.protocol.HTTP;
-import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
-import org.springframework.web.client.RestTemplate;
-
-import java.net.URI;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import com.ouiztiti.easylife.http.AddItemHttpTask;
+import com.ouiztiti.easylife.http.GetUserListHttpTask;
+import com.ouiztiti.easylife.http.MoveItemHttpTask;
+import com.ouiztiti.easylife.http.PutUserListHttpTask;
 
 /**
  *  The PlaceholderFragment presents a UserIntent list
@@ -62,7 +55,7 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
         setHasOptionsMenu(true);
     }
 
-    public String getListeName() {
+    public final String getListeName() {
         return listeName;
     }
 
@@ -121,15 +114,26 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
 
     @Override
     public void onClick(final View view) {
-        // We need to post a Runnable to show the popup to make sure that the PopupMenu is
-        // correctly positioned. The reason being that the view may change position before the
-        // PopupMenu is shown.
-        view.post(new Runnable() {
-            @Override
-            public void run() {
-                showPopupMenu(view);
-            }
-        });
+        // Click on text.
+        switch(view.getId()) {
+            case R.id.button_popup :
+                // We need to post a Runnable to show the popup to make sure that the PopupMenu is
+                // correctly positioned. The reason being that the view may change position before
+                // the PopupMenu is shown.
+                view.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        showPopupMenu(view);
+                    }
+                });
+                break ;
+            case android.R.id.text1 :
+                // Show Item Editor View Dialog
+
+                break ;
+        }
+
+
     }
 
     @Override
@@ -144,134 +148,62 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
     }
 
     public void loadContentList() {
-        Log.d(LOG_TAG,"loadContentList : " + listeName) ;
-        HttpRequestTask request = new HttpRequestTask();
+        Log.d(LOG_TAG, "loadContentList : " + listeName) ;
+        GetUserListHttpTask request = new GetUserListHttpTask(this);
         request.execute();
     }
 
+    /**
+     * Push UserList to backend server.
+     */
     private void saveContentList() {
         ListView listView = (ListView) PlaceholderFragment.this.getView().findViewById(R.id.listView) ;
         final PopupAdapter adapter = (PopupAdapter) listView.getAdapter();
         UserList userList = adapter.getUserList() ;
-        HttpPutTask put = new HttpPutTask();
+        PutUserListHttpTask put = new PutUserListHttpTask();
         put.execute(userList) ;
     }
 
     /**
-     * Save List (PUT)
+     * Update the presented list
+     * @param list
      */
-    private class HttpPutTask extends AsyncTask<UserList, Void, Void> {
-
-        @Override
-        protected Void doInBackground(UserList... params) {
-            try {
-                final String url = HTTP_HOST_USER_LIST + listeName;
-
-                RestTemplate restTemplate = new RestTemplate();
-                restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
-
-                restTemplate.put(url, params[0]) ;
-                Log.i("MainActivity", "put done") ;
-
-            } catch (Exception e) {
-                Log.e("MainActivity", e.getMessage(), e);
-            }
-            return null ;
-        }
-    }
-
-    /**
-     * Read List (GET)
-     */
-    private class HttpRequestTask extends AsyncTask<Void, Void, UserList> {
-
-        @Override
-        protected UserList doInBackground(Void... params) {
-            try {
-                final String url = HTTP_HOST_USER_LIST + listeName;
-                RestTemplate restTemplate = new RestTemplate();
-                restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
-                UserList userList = restTemplate.getForObject(url, UserList.class);
-                return userList;
-            } catch (Exception e) {
-                Log.e("MainActivity", e.getMessage(), e);
-            }
-
-            return null;
+    public void setUserList(UserList list) {
+        if(list==null) {
+            Log.e(PlaceholderFragment.class.getSimpleName(), "UserList[" + listeName + "] == null") ;
+            return ;
         }
 
-        @Override
-        protected void onPostExecute(UserList list) {
-            if(list==null) {
-                Log.e(PlaceholderFragment.class.getSimpleName(),"UserList["+listeName+"] == null") ;
-                return ;
-            }
-
-            View rootView = getView() ;
-            if(rootView==null) {
-                Log.e(PlaceholderFragment.class.getSimpleName(), "Root fragement is null") ;
-                return ;
-            }
-
-            TextView listeNameText = (TextView) rootView.findViewById(R.id.liste_name);
-            TextView listeSizeText = (TextView) rootView.findViewById(R.id.liste_size);
-            listeNameText.setText(list.getListeName());
-            listeSizeText.setText(String.valueOf(list.getListe().size()));
-
-            ListView listView = (ListView) rootView.findViewById(R.id.listView) ;
-
-            if(list==null) {
-                Log.e(PlaceholderFragment.class.getSimpleName(), "List " + listeName + "is NULL") ;
-                return ;
-            }
-
-            ArrayAdapter adapter = new PopupAdapter(list) ;
-
-
-            listView.setAdapter(adapter);
-
+        View rootView = getView() ;
+        if(rootView==null) {
+            Log.e(PlaceholderFragment.class.getSimpleName(), "Root fragement is null") ;
+            return ;
         }
 
+        TextView listeNameText = (TextView) rootView.findViewById(R.id.liste_name);
+        TextView listeSizeText = (TextView) rootView.findViewById(R.id.liste_size);
+        listeNameText.setText(list.getListeName());
+        listeSizeText.setText(String.valueOf(list.getListe().size()));
+
+        ListView listView = (ListView) rootView.findViewById(R.id.listView) ;
+
+        if(list==null) {
+            Log.e(PlaceholderFragment.class.getSimpleName(), "List " + listeName + "is NULL") ;
+            return ;
+        }
+
+        ArrayAdapter adapter = new PopupAdapter(this, list) ;
+
+
+        listView.setAdapter(adapter);
     }
 
     /**
      * Add Item ? POST to Liste
      */
     private void testAddItem() {
-
-        class HttpRequestTaskAddTest extends AsyncTask<Void, Void, Void> {
-
-            @Override
-            protected Void doInBackground(Void... params) {
-                try {
-
-                    //String listeName = PlaceholderFragment.MAPPED_LISTED_NAME[curItem] ;
-
-                    final String url = HTTP_HOST_USER_LIST+listeName;
-                    RestTemplate restTemplate = new RestTemplate();
-                    restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
-
-                    UserIntent userIntent = new UserIntent() ;
-                    userIntent.setContent("[TEST] " + listeName + "(" + SimpleDateFormat.getDateInstance().format(new Date()) +")");
-                    URI uri = restTemplate.postForLocation(url, userIntent) ;
-                    Log.i("MainActivity", "postForLocation result = " + uri) ;
-                } catch (Exception e) {
-                    Log.e("MainActivity", e.getMessage(), e);
-                }
-                return null ;
-            }
-
-            @Override
-            protected void onPostExecute(Void list) {
-                // reload
-                loadContentList();
-            }
-
-        }
-
-        new HttpRequestTaskAddTest().execute() ;
+        new AddItemHttpTask(this).execute() ;
     }
-
 
     /**
      *
@@ -279,37 +211,8 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
      * @param listNameDestination
      */
     private void testMove(final int itemPosition, final String listNameDestination) {
-        class HttpRequestTaskMoveTest extends AsyncTask<Void, Void, Void> {
 
-            @Override
-            protected Void doInBackground(Void... params) {
-                try {
-
-                    final String url = HTTP_HOST_USER_LIST+listeName+"/"+listNameDestination;
-                    RestTemplate restTemplate = new RestTemplate();
-                    restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
-
-                    URI uri = restTemplate.postForLocation(url, new Integer(itemPosition)) ;
-                    Log.i("MainActivity", "postForLocation result = " + uri) ;
-                } catch (Exception e) {
-                    Log.e("MainActivity", e.getMessage(), e);
-                }
-                return null ;
-            }
-
-            @Override
-            protected void onPostExecute(Void list) {
-                // Test TODO HTTP RESULT !!
-                // reload me
-                loadContentList();
-                // broadcast reload event !
-                String[] targetListNames = {listNameDestination} ;
-                ((UserListListener)getActivity()).onBroadCast(targetListNames) ;
-            }
-
-        }
-
-        new HttpRequestTaskMoveTest().execute() ;
+        new MoveItemHttpTask(this, itemPosition, listNameDestination).execute() ;
     }
 
 
@@ -379,49 +282,5 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
     }
     // END_INCLUDE(show_popup)
 
-    /**
-     * A simple array adapter that creates a list of UserIntent.
-     */
-    class PopupAdapter extends ArrayAdapter<UserIntent> {
-
-        private UserList userList ;
-
-        PopupAdapter(UserList userList) {
-            super(getActivity(), R.layout.list_item, android.R.id.text1, userList.getListe());
-            this.userList = userList ;
-        }
-
-        public UserList getUserList() {
-            return userList;
-        }
-
-        @Override
-        public View getView(int position, View convertView, final ViewGroup container) {
-            // Let ArrayAdapter inflate the layout and set the text
-            //View view = super.getView(position, convertView, container);
-
-            // Check if an existing view is being reused, otherwise inflate the view
-            if (convertView == null) {
-                convertView = LayoutInflater.from(getContext()).inflate(R.layout.list_item, container, false);
-            }
-            TextView tv = (TextView)convertView.findViewById(android.R.id.text1) ;
-            UserIntent item = getItem(position) ;
-            tv.setText(item.getContent());
-
-            // BEGIN_INCLUDE(button_popup)
-            // Retrieve the popup button from the inflated view
-            View popupButton = convertView.findViewById(R.id.button_popup);
-
-            // Set the item as the button's tag so it can be retrieved later
-            popupButton.setTag(item);
-
-            // Set the fragment instance as the OnClickListener
-            popupButton.setOnClickListener(PlaceholderFragment.this);
-            // END_INCLUDE(button_popup)
-
-            // Finally return the view to be displayed
-            return convertView;
-        }
-    }
 
 }
