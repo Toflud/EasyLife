@@ -1,6 +1,7 @@
 package com.ouiztiti.easylife;
 
 import android.app.Activity;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
@@ -40,7 +41,8 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
      * fragment.
      */
     private static final String ARG_SECTION_NUMBER = "section_number";
-    public static final String HTTP_HOST_USER_LIST = "http://192.168.1.48:8080/user/list/";
+    public static final String HOST = "ec2-52-30-29-111.eu-west-1.compute.amazonaws.com/" ;
+    public static final String HTTP_HOST_USER_LIST = "http://" + HOST + "/user/list/";
 
     private String listeName ;
 
@@ -60,12 +62,28 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
         setHasOptionsMenu(true);
     }
 
+    public String getListeName() {
+        return listeName;
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate
                 (R.layout.fragment_main, container, false);
         return rootView;
+    }
+
+    @Override
+    public void onViewStateRestored(Bundle savedInstanceState) {
+        super.onViewStateRestored(savedInstanceState);
+        Log.i(LOG_TAG, "onViewStateRestored " + listeName) ;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        Log.i(LOG_TAG, "onResume " + listeName) ;
     }
 
     @Override
@@ -95,7 +113,9 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
             // test add
             Log.i(LOG_TAG, "onOptionsItemSelected " + listeName) ;
             testAddItem();
+            return true ;
         }
+
         return super.onOptionsItemSelected(item);
     }
 
@@ -120,10 +140,11 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
     @Override
     public void setArguments(Bundle args) {
         super.setArguments(args);
-        listeName = MAPPED_LISTED_NAME[getArguments().getInt(ARG_SECTION_NUMBER)] ;
+        listeName = MAPPED_LISTED_NAME[getUserListPosition()] ;
     }
 
-    private void loadContentList() {
+    public void loadContentList() {
+        Log.d(LOG_TAG,"loadContentList : " + listeName) ;
         HttpRequestTask request = new HttpRequestTask();
         request.execute();
     }
@@ -132,13 +153,12 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
         ListView listView = (ListView) PlaceholderFragment.this.getView().findViewById(R.id.listView) ;
         final PopupAdapter adapter = (PopupAdapter) listView.getAdapter();
         UserList userList = adapter.getUserList() ;
-
         HttpPutTask put = new HttpPutTask();
         put.execute(userList) ;
     }
 
     /**
-     *
+     * Save List (PUT)
      */
     private class HttpPutTask extends AsyncTask<UserList, Void, Void> {
 
@@ -160,6 +180,9 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
         }
     }
 
+    /**
+     * Read List (GET)
+     */
     private class HttpRequestTask extends AsyncTask<Void, Void, UserList> {
 
         @Override
@@ -212,7 +235,7 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
     }
 
     /**
-     *
+     * Add Item ? POST to Liste
      */
     private void testAddItem() {
 
@@ -249,6 +272,47 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
         new HttpRequestTaskAddTest().execute() ;
     }
 
+
+    /**
+     *
+     * @param itemPosition
+     * @param listNameDestination
+     */
+    private void testMove(final int itemPosition, final String listNameDestination) {
+        class HttpRequestTaskMoveTest extends AsyncTask<Void, Void, Void> {
+
+            @Override
+            protected Void doInBackground(Void... params) {
+                try {
+
+                    final String url = HTTP_HOST_USER_LIST+listeName+"/"+listNameDestination;
+                    RestTemplate restTemplate = new RestTemplate();
+                    restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
+
+                    URI uri = restTemplate.postForLocation(url, new Integer(itemPosition)) ;
+                    Log.i("MainActivity", "postForLocation result = " + uri) ;
+                } catch (Exception e) {
+                    Log.e("MainActivity", e.getMessage(), e);
+                }
+                return null ;
+            }
+
+            @Override
+            protected void onPostExecute(Void list) {
+                // Test TODO HTTP RESULT !!
+                // reload me
+                loadContentList();
+                // broadcast reload event !
+                String[] targetListNames = {listNameDestination} ;
+                ((UserListListener)getActivity()).onBroadCast(targetListNames) ;
+            }
+
+        }
+
+        new HttpRequestTaskMoveTest().execute() ;
+    }
+
+
     // BEGIN_INCLUDE(show_popup)
     private void showPopupMenu(View view) {
         ListView listView = (ListView) getView().findViewById(R.id.listView) ;
@@ -277,6 +341,24 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
                         /** **/
 
                         return true;
+                    case R.id.menu_move_to_left: {
+                        // Check if movement is possible
+                        int position = getUserListPosition();
+                        if (position == 0) return true;
+                        int itemPosition = adapter.getPosition(item) ;
+                        String listNameDestination = MAPPED_LISTED_NAME[position-1] ;
+                        testMove(itemPosition, listNameDestination);
+                        return true;
+                    }
+                    case R.id.menu_move_to_right: {
+                        //
+                        int position = getUserListPosition();
+                        if (position == (MAPPED_LISTED_NAME.length-1)) return true;
+                        int itemPosition = adapter.getPosition(item) ;
+                        String listNameDestination = MAPPED_LISTED_NAME[position+1] ;
+                        testMove(itemPosition, listNameDestination);
+                        return true;
+                    }
                 }
                 return false;
             }
@@ -284,6 +366,16 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
 
         // Finally show the PopupMenu
         popup.show();
+    }
+
+
+
+    /**
+     * Get the user list position (section number)
+     * @return
+     */
+    private int getUserListPosition() {
+        return getArguments().getInt(ARG_SECTION_NUMBER);
     }
     // END_INCLUDE(show_popup)
 
@@ -304,7 +396,7 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
         }
 
         @Override
-        public View getView(int position, View convertView, ViewGroup container) {
+        public View getView(int position, View convertView, final ViewGroup container) {
             // Let ArrayAdapter inflate the layout and set the text
             //View view = super.getView(position, convertView, container);
 
@@ -326,7 +418,6 @@ public class PlaceholderFragment extends Fragment implements View.OnClickListene
             // Set the fragment instance as the OnClickListener
             popupButton.setOnClickListener(PlaceholderFragment.this);
             // END_INCLUDE(button_popup)
-
 
             // Finally return the view to be displayed
             return convertView;

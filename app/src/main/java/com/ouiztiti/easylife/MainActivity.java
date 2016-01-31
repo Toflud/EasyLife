@@ -1,6 +1,7 @@
 package com.ouiztiti.easylife;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Locale;
 
 import android.net.Uri;
@@ -26,7 +27,9 @@ import android.widget.TextView;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.client.RestTemplate;
 
-public class MainActivity extends AppCompatActivity implements ActionBar.TabListener {
+public class MainActivity extends AppCompatActivity implements ActionBar.TabListener, UserListListener {
+
+    private static final String LOG_TAG = PlaceholderFragment.class.getSimpleName() ;
 
     /**
      * The {@link android.support.v4.view.PagerAdapter} that will provide
@@ -67,8 +70,13 @@ public class MainActivity extends AppCompatActivity implements ActionBar.TabList
             @Override
             public void onPageSelected(int position) {
                 actionBar.setSelectedNavigationItem(position);
+                String title = mViewPager.getAdapter().getPageTitle(position).toString() ;
+                Log.i(LOG_TAG, "onPageSelected " + title) ;
+                // get fragment ?
+
             }
         });
+
 
         // For each of the sections in the app, add a tab to the action bar.
         for (int i = 0; i < mSectionsPagerAdapter.getCount(); i++) {
@@ -115,6 +123,7 @@ public class MainActivity extends AppCompatActivity implements ActionBar.TabList
         // When the given tab is selected, switch to the corresponding page in
         // the ViewPager.
         mViewPager.setCurrentItem(tab.getPosition());
+
     }
 
     @Override
@@ -124,6 +133,24 @@ public class MainActivity extends AppCompatActivity implements ActionBar.TabList
     @Override
     public void onTabReselected(ActionBar.Tab tab, FragmentTransaction fragmentTransaction) {
     }
+
+    @Override
+    /**
+     * One knwown broadcast event is reloadContentList. It is required when a move operation has
+     * been requested so that the destination list is updated too.
+     */
+    public void onBroadCast(String[] targetListNames) {
+        List<Fragment> fragments = getSupportFragmentManager().getFragments();
+        for (Fragment frag : fragments ) {
+            for(String listName : targetListNames) {
+                PlaceholderFragment frag1 = (PlaceholderFragment) frag;
+                if( frag1.getListeName().equals(listName)) {
+                    frag1.loadContentList() ;
+                }
+            }
+        }
+    }
+
 
     /**
      * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
@@ -135,11 +162,17 @@ public class MainActivity extends AppCompatActivity implements ActionBar.TabList
             super(fm);
         }
 
+        // Refresh model list
+
+
         @Override
+        // Built call back
         public Fragment getItem(int position) {
             // getItem is called to instantiate the fragment for the given page.
             // Return a PlaceholderFragment (defined as a static inner class below).
-            return PlaceholderFragment.newInstance(position);
+            PlaceholderFragment result = PlaceholderFragment.newInstance(position) ;
+
+            return result ;
         }
 
         @Override
